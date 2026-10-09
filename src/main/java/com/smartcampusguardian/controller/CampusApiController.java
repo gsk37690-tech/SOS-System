@@ -1,0 +1,23 @@
+package com.smartcampusguardian.controller;
+
+import com.smartcampusguardian.dto.IncidentRequest; import com.smartcampusguardian.service.CampusOperationsService; import jakarta.validation.Valid; import java.util.*; import org.springframework.security.core.Authentication; import org.springframework.web.bind.annotation.*;
+
+@RestController @RequestMapping("/api") public class CampusApiController {
+ private final CampusOperationsService campus; public CampusApiController(CampusOperationsService campus){this.campus=campus;} private String user(Authentication a){return a.getName();}
+ @GetMapping("/zones") public List<Map<String,Object>> zones(){return campus.zones();} @GetMapping("/alerts") public List<Map<String,Object>> alerts(){return campus.alerts();}
+ @GetMapping("/student/dashboard") public Map<String,Object> dashboard(Authentication a){return campus.dashboard(user(a));}
+ @GetMapping("/student/incidents") public List<Map<String,Object>> mine(Authentication a){return campus.studentIncidents(user(a));}
+ @PostMapping("/student/incidents") public Map<String,Object> report(@Valid @RequestBody IncidentRequest r,Authentication a){return campus.createIncident(user(a),r);}
+ @GetMapping("/student/notifications") public List<Map<String,Object>> notifications(Authentication a){return campus.notifications(user(a));}
+ @GetMapping("/student/contacts") public List<Map<String,Object>> contacts(Authentication a){return campus.contacts(user(a));} @PostMapping("/student/contacts") public Map<String,String> contact(@RequestParam String name,@RequestParam String phone,@RequestParam(required=false) String relationship,@RequestParam(defaultValue="false") boolean primary,Authentication a){campus.addContact(user(a),name,relationship,phone,primary);return Map.of("status","created");}
+ @GetMapping("/student/safe-walks") public List<Map<String,Object>> safeWalks(Authentication a){return campus.safeWalks(user(a));} @PostMapping("/student/safe-walks") public Map<String,String> safeWalk(@RequestParam Long startZone,@RequestParam Long destinationZone,Authentication a){campus.requestSafeWalk(user(a),startZone,destinationZone);return Map.of("status","requested");}
+ @PostMapping("/student/check-ins/{id}") public Map<String,String> checkIn(@PathVariable Long id,@RequestParam String response,Authentication a){campus.respondCheckIn(user(a),id,response);return Map.of("status",response);}
+ @GetMapping("/admin/dashboard") public List<Map<String,Object>> adminDashboard(){return campus.adminDashboard();} @GetMapping("/admin/incidents") public List<Map<String,Object>> incidents(){return campus.allIncidents();}
+ @GetMapping("/admin/incidents/{id}") public Map<String,Object> incident(@PathVariable Long id,Authentication a){return campus.incident(id,user(a),true);}
+ @PostMapping("/admin/incidents/{id}/assign") public Map<String,String> assign(@PathVariable Long id,@RequestParam Long officerId,Authentication a){campus.assign(id,officerId,user(a));return Map.of("status","ASSIGNED");}
+ @GetMapping("/admin/analytics") public List<Map<String,Object>> analytics(){return campus.analytics();} @GetMapping("/admin/audit-logs") public List<Map<String,Object>> audits(){return campus.audits();}
+ @PostMapping("/admin/alerts") public Map<String,String> alert(@RequestParam String title,@RequestParam String message,@RequestParam(defaultValue="MEDIUM") String severity,Authentication a){campus.createAlert(user(a),title,message,severity);return Map.of("status","created");} @GetMapping("/admin/check-ins") public List<Map<String,Object>> checkIns(){return campus.checkIns();} @PostMapping("/admin/check-ins") public Map<String,Long> newCheckIn(@RequestParam String title,@RequestParam String message,Authentication a){return Map.of("id",campus.createCheckIn(user(a),title,message));}
+ @PostMapping("/admin/drills") public Map<String,Long> drill(@RequestParam String title,@RequestParam(required=false) String description,Authentication a){return Map.of("id",campus.createDrill(user(a),title,description));} @GetMapping("/admin/drills") public List<Map<String,Object>> drills(){return campus.drills();} @GetMapping("/admin/risk-index") public Map<String,Object> risk(){return campus.riskIndex();} @GetMapping("/admin/clusters") public List<Map<String,Object>> clusters(){return campus.clusters();}
+ @GetMapping("/security/assignments") public List<Map<String,Object>> assignments(Authentication a){return campus.assignments(user(a));}
+ @PostMapping("/security/incidents/{id}/transition") public Map<String,String> transition(@PathVariable Long id,@RequestParam String status,@RequestParam(required=false) String notes,Authentication a){campus.transition(id,status,notes,user(a));return Map.of("status",status);}
+}
