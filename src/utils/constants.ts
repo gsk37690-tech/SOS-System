@@ -41,7 +41,7 @@ export const STATUS_FLOW: IncidentStatus[] = [
 ];
 
 export const VALID_TRANSITIONS: Record<IncidentStatus, IncidentStatus[]> = {
-  REPORTED: ['ASSIGNED', 'CANCELLED'],
+  REPORTED: ['ASSIGNED', 'ACKNOWLEDGED', 'CANCELLED'],
   ASSIGNED: ['ACKNOWLEDGED', 'ASSIGNED', 'CANCELLED'], // re-assign allowed
   ACKNOWLEDGED: ['RESPONDING', 'CANCELLED'],
   RESPONDING: ['ARRIVED', 'CANCELLED'],

@@ -33,6 +33,7 @@ export const SecurityPortal: React.FC<SecurityPortalProps> = ({ onSelectIncident
     zones,
     updateOfficerStatus,
     updateIncidentStatus,
+    selfAssignAndAcknowledge,
   } = useApp();
 
   // Current security officer profile
@@ -54,9 +55,13 @@ export const SecurityPortal: React.FC<SecurityPortalProps> = ({ onSelectIncident
   );
 
   const handleStatusUpdate = (incident: Incident, newStatus: IncidentStatus) => {
+    if (incident.status === 'REPORTED' && newStatus === 'ACKNOWLEDGED') {
+      selfAssignAndAcknowledge(incident.id, myOfficer.id);
+      return;
+    }
     let note = '';
     if (newStatus === 'ACKNOWLEDGED') {
-      note = `Dispatch acknowledged by ${myOfficer.name} (${myOfficer.badgeNumber}). Proceeding to vehicle/equipment.`;
+      note = `Dispatch acknowledged by ${myOfficer.name} (${myOfficer.badgeNumber}). Proceeding to call.`;
     } else if (newStatus === 'RESPONDING') {
       note = `Officer en route to ${incident.zoneName}. Code 2 response initialized.`;
     } else if (newStatus === 'ARRIVED') {
@@ -302,10 +307,12 @@ export const SecurityPortal: React.FC<SecurityPortalProps> = ({ onSelectIncident
                     <div className="flex items-center gap-2">
                       {inc.status === 'REPORTED' && (
                         <button
-                          onClick={() => handleStatusUpdate(inc, 'ACKNOWLEDGED')}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white rounded-lg transition"
+                          type="button"
+                          onClick={() => selfAssignAndAcknowledge(inc.id, myOfficer.id)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white rounded-lg transition shadow-md flex items-center gap-1.5"
                         >
-                          Self-Assign & Acknowledge
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Self-Assign & Acknowledge</span>
                         </button>
                       )}
 

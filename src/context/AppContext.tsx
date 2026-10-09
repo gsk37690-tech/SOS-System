@@ -48,6 +48,7 @@ interface AppContextType {
     coordinates?: IncidentCoordinates;
   }) => Incident;
   assignOfficer: (incidentId: string, officerId: string, note?: string) => void;
+  selfAssignAndAcknowledge: (incidentId: string, officerId: string, note?: string) => void;
   updateIncidentStatus: (incidentId: string, newStatus: IncidentStatus, note: string) => boolean;
   overrideSeverity: (incidentId: string, newSeverity: IncidentSeverity, justification: string) => void;
   cancelIncident: (incidentId: string, reason: string) => void;
@@ -542,6 +543,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const selfAssignAndAcknowledge = (incidentId: string, officerId: string, note?: string) => {
+    const officer = officers.find(o => o.id === officerId) || officers[0];
+    if (!officer) return;
+
+    const now = new Date().toISOString();
+    const ackNote = note || `Self-assigned and acknowledged by ${officer.name} (${officer.badgeNumber}). Proceeding immediately to call.`;
+
+    setIncidents(prev =>
+      prev.map(inc => {
+        if (inc.id !== incidentId) return inc;
+        const assignUpdate: IncidentUpdate = {
+          id: 'up-' + Date.now(),
+          incidentId: inc.id,
+          timestamp: now,
+          actorName: currentUser.name,
+          actorRole: currentUser.role,
+          status: 'ASSIGNED',
+          note: `Self-assigned by ${officer.name} (${officer.badgeNumber}).`,
+        };
+        const ackUpdate: IncidentUpdate = {
+          id: 'up-' + (Date.now() + 1),
+          incidentId: inc.id,
+          timestamp: new Date(Date.now() + 250).toISOString(),
+          actorName: currentUser.name,
+          actorRole: currentUser.role,
+          status: 'ACKNOWLEDGED',
+          note: ackNote,
+        };
+        return {
+          ...inc,
+          status: 'ACKNOWLEDGED',
+          assignedOfficerId: officer.id,
+          assignedOfficerName: officer.name,
+          assignedBadge: officer.badgeNumber,
+          updatedAt: now,
+          timeline: [...inc.timeline, assignUpdate, ackUpdate],
+        };
+      })
+    );
+
+    // Update officer assigned count & status
+    setOfficers(prev =>
+      prev.map(o =>
+        o.id === officer.id
+          ? { ...o, status: 'RESPONDING', assignedIncidentCount: o.assignedIncidentCount + 1 }
+          : o
+      )
+    );
+
+    const targetInc = incidents.find(i => i.id === incidentId);
+    if (targetInc) {
+      addAuditLog(
+        'SELF_ASSIGN_ACKNOWLEDGE',
+        'INCIDENT',
+        targetInc.code,
+        `Self-assigned & acknowledged by ${officer.name} (${officer.badgeNumber})`
+      );
+
+      addNotification({
+        targetRole: 'ROLE_ADMIN',
+        title: `Dispatch Taken: ${targetInc.code}`,
+        message: `${officer.name} self-assigned & acknowledged ${targetInc.type} at ${targetInc.zoneName}.`,
+        priority: 'HIGH',
+        incidentCode: targetInc.code,
+      });
+
+      addNotification({
+        targetRole: 'ROLE_STUDENT',
+        targetUserId: targetInc.reporterId,
+        title: `Officer En Route: ${targetInc.code}`,
+        message: `${officer.name} (${officer.badgeNumber}) has self-assigned your incident and is responding.`,
+        priority: 'HIGH',
+        incidentCode: targetInc.code,
+      });
+    }
+  };
+
   const updateIncidentStatus = (incidentId: string, newStatus: IncidentStatus, note: string): boolean => {
     const targetInc = incidents.find(i => i.id === incidentId);
     if (!targetInc) return false;
@@ -554,6 +632,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const now = new Date().toISOString();
+
+    // If an unassigned incident is being marked ACKNOWLEDGED by an officer, automatically bind ownership
+    let assignedOfficerId = targetInc.assignedOfficerId;
+    let assignedOfficerName = targetInc.assignedOfficerName;
+    let assignedBadge = targetInc.assignedBadge;
+
+    if (!assignedOfficerId && currentUser.role === 'ROLE_SECURITY') {
+      const activeOfficer = officers.find(o => o.userId === currentUser.id) || officers[0];
+      if (activeOfficer) {
+        assignedOfficerId = activeOfficer.id;
+        assignedOfficerName = activeOfficer.name;
+        assignedBadge = activeOfficer.badgeNumber;
+
+        setOfficers(prev =>
+          prev.map(o =>
+            o.id === activeOfficer.id
+              ? { ...o, status: 'RESPONDING', assignedIncidentCount: o.assignedIncidentCount + 1 }
+              : o
+          )
+        );
+      }
+    }
 
     setIncidents(prev =>
       prev.map(inc => {
@@ -570,6 +670,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return {
           ...inc,
           status: newStatus,
+          assignedOfficerId,
+          assignedOfficerName,
+          assignedBadge,
           updatedAt: now,
           resolvedAt: newStatus === 'RESOLVED' ? now : inc.resolvedAt,
           timeline: [...inc.timeline, update],
@@ -805,6 +908,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         safetyCheckIns,
         createIncident,
         assignOfficer,
+        selfAssignAndAcknowledge,
         updateIncidentStatus,
         overrideSeverity,
         cancelIncident,
