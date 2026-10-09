@@ -1,0 +1,5 @@
+{
+  "name": "Smart Campus Guardian - SOS & Campus Safety System",
+  "description": "Comprehensive student safety and emergency management system featuring SOS alerts, incident tracking, officer dispatch, triage workflow, and safety analytics.",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
