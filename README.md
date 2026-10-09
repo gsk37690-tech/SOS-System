@@ -13,3 +13,16 @@ A comprehensive student safety and campus emergency response management system f
   - Rule-based triage severity with audited admin override.
   - Legal transition enforcement: `REPORTED` → `ASSIGNED` → `ACKNOWLEDGED` → `RESPONDING` → `ARRIVED` → `RESOLVED`.
   - State persistence via browser storage with one-click scenario reset and simulated beacon triggers.
+
+## Hosting on GitHub Pages (Free)
+
+This project is fully configured for zero-configuration hosting on **GitHub Pages**:
+
+1. Push this repository to your GitHub account (`gsk37690-tech/SOS-System`).
+2. On your GitHub repository page:
+   - Click **Settings** (top tab).
+   - Click **Pages** (in the left sidebar).
+   - Under **Build and deployment > Source**, choose **GitHub Actions**.
+3. That's it! The automated workflow in `.github/workflows/deploy.yml` will automatically build the React app and deploy it to:
+   `https://<your-username>.github.io/SOS-System/`
+
